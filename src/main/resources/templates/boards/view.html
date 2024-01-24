@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+	xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+	layout:decorate="~{/layout/wrap}">
+
+<div layout:fragment="contents">
+	<div class="card-header">View Page</div>
+	<div class="card-body">
+		<div class="form-group">
+			<label>BNO</label><input class="form-control" name="bno" th:value="${vo.bno}" readonly="readonly"/>
+		</div>
+		<div class="form-group">
+			<label>Title</label><input class="form-control" name="title" th:value="${vo.title}" readonly="readonly"/>
+			<p class="help-block">Title text here.</p>
+		</div>
+		<div class="form-group">
+			<label>Content</label><textarea class="form-control" rows="3" name="content" th:text="${vo.content}" readonly="readonly"></textarea>
+		</div>
+		<div class="form-group">
+			<label>Writer</label><input class="form-control" name="writer" th:value="${vo.writer}" readonly="readonly"/>
+		</div>
+		<div class="form-group">
+			<label>RegDate</label><input class="form-control" name="regDate" th:value="${#dates.format(vo.regdate,'yyyy-MM-dd')}" readonly="readonly"/>
+		</div>
+		<div class="d-flex justify-content-end">
+			<a th:href="@{modify(page=${pageVO.page},
+								size=${pageVO.size},
+								type=${pageVO.type},
+								keyword=${pageVO.keyword},
+								bno=${vo.bno})}" class="btn btn-danger">Modify/Delete</a>
+			<a th:href="@{list(page=${pageVO.page},
+								size=${pageVO.size},
+								type=${pageVO.type},
+								keyword=${pageVO.keyword},
+								bno=${vo.bno})}" class="btn btn-primary ms-2">Go List</a>
+		</div>
+	</div>
+	<div class="card-body">
+		<table class="table table-striped table-bordered table-hover">
+			<thead>
+				<tr>
+					<td>BNO</td>
+					<td>REPLY TEXT</td>
+					<td>REPYER</td>
+					<td>REPLY DATE</td>
+				</tr>
+			</thead>
+			<tbody id="replyTable">
+			</tbody>
+		</table>
+
+		<div class="d-flex justify-content-end">
+			<button class="btn btn-primary" id="addReplyBtn">Add reply</button>
+		</div>
+
+<!--모달팝업-->
+		<div id="myModal" class="modal fade" role="dialog">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-bs-dismiss="modal">&times;</button>
+						<h4 class="modal-title">Modal Header </h4>
+					</div>
+					<div class="modal-body">
+						<label>reply Text</label>
+						<input type="text" class="form-control" name="replyText">
+						<label>replyer</label>
+						<input type="text" class="form-control" name="replyer">
+					</div>
+					<div class="modal-footer">
+						<button id="delModalBtn" class="btn btn-danger">Delete</button>
+						<button id="modalBtn" class="btn btn-info">Save</button>
+						<button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
+					</div>
+
+				</div>
+			</div>
+		</div>
+
+
+	</div>
+
+
+	<script src="/js/reply.js"></script>
+	<script>
+		$(function (){
+			replyManager.getAll([[${vo.bno}]], printList);
+
+
+			function printList(list){
+				var str="";
+				var replyObj;
+				for(var i=0; i<list.length; i++){
+					replyObj = list[i];
+					str += "<tr>" +
+						   "	<td>"+ replyObj.rno+"</td>" +
+							"	<td>"+ replyObj.replyText+"</td>" +
+							"	<td>"+ replyObj.replyer+"</td>" +
+							"	<td>"+ formatDate(replyObj.regdate)+"</td>" +
+							"</tr>";
+
+				}
+				$("#replyTable").html(str);
+			}
+			function formatDate(timeValue){
+				var date = new Date(timeValue);
+				return date.getFullYear() + "-" + (date.getMonth()+1 >= 10? date.getMonth()+1 :
+				'0'+ (date.getMonth()+1)) + "-" + date.getDate()
+			}
+
+			//모달 팝업 이벤트
+			var mode;
+			var myModal = new bootstrap.Modal('#myModal', {});
+			$('#addReplyBtn').on('click',function (){
+				myModal.show();
+				$('.modal-title').text('Add Reply');
+				mode = 'ADD';
+			});
+
+			//댓글 추가
+			var bno = [[${vo.bno}]]
+			var replyTextObj = $("input[name= 'replyText']");
+			var replyObj = $("input[name='replyer']");
+
+			$('#modalBtn').click(function (){
+				var replyText = replyTextObj.val();
+				var replyer = replyObj.val();
+
+				if(mode == 'ADD'){
+					var obj = {replyText: replyText, replyer: replyer, bno: bno};
+
+					replyManager.add(obj, function (list){
+						printList(list);
+						alert("새로운 댓글이 등록되었습니다");
+						$("#myModal").modal("hide");
+						replyTextObj.val("");
+						replyObj.val("");
+					});
+				}else if( mode == 'MOD'){
+					var obj = {replyText: replyText, bno: bno, rno: rno};
+					replyManager.update(obj, function (list){
+						alert("댓글이 수정되었습니다");
+						$("#myModal").modal("hide");
+						afterAll(list);
+					})
+				}
+			});
+
+			var rno;
+			$("#replyTable").on("click","tr", function (e){
+				var tds = $(this).find("td");
+				rno = tds[0].innerHTML;
+				mode = 'MOD';
+				replyTextObj.val(tds[1].innerHTML);
+				replyObj.val(tds[2].innerHTML);
+				myModal.show();
+				$(".modal-title").text("Modify/Delete Reply");
+			});
+			$("#delModalBtn").on("click", function (){
+				var obj = {bno: bno, rno: rno};
+				replyManager.remove(obj, function (list){
+					printList(list);
+					alert("댓글이 삭제되엇습니다");
+					$("#myModal").modal("hide");
+					replyTextObj.val("");
+					replyObj.val("");
+				});
+			});
+		})
+	</script>
+</div>
+	
+	
+</html>
