@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.zerock.WebBoardMapper;
 import org.zerock.domain.WebBoard;
+import org.zerock.persistence.CustomCrudRepository;
 import org.zerock.persistence.WebBoardRespository;
 import org.zerock.vo.PageMaker;
 import org.zerock.vo.PageVO;
@@ -28,15 +29,20 @@ import lombok.extern.java.Log;
 public class WebBoardController {
 	
 	@Autowired
-	private WebBoardRespository repo;
+//	private WebBoardRespository repo;
+	private CustomCrudRepository repo;
 	
 	@GetMapping("/list")
-	public void list(@ModelAttribute PageVO vo, Model model) {
+	public void list(@ModelAttribute("pageVO") PageVO vo, Model model) {
 		Pageable page = vo.makePageable(0, "bno");
-		Page<WebBoard> result = repo.findAll(repo.makePredicate(vo.getType(), vo.getKeyword()), page);
-		
+
+//		Page<WebBoard> result = repo.findAll(repo.makePredicate(vo.getType(), vo.getKeyword()), page);
+		Page<Object[]> result = repo.getCustomPage(vo.getType(), vo.getKeyword(), page);
+
 		log.info(""+page);
 		log.info(""+result);
+
+		log.info("total page number: "+result.getTotalPages());
 		
 		model.addAttribute("result", new PageMaker(result));
 	}

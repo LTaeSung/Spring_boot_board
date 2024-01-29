@@ -52,4 +52,6 @@ class WebBoardRepositoryTests {
 		result.getContent().forEach(board->log.info(""+board));
 	}
 
+
+
 }
